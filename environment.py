@@ -5,8 +5,14 @@ import dash_core_components as dcc
 from dash.dependencies import Input, Output, State
 import pandas as pd
 import base64
-import io
+import io,os,sys
 from dash import dash_table
+
+dir_import = os.getcwd()
+dir_base = f'{dir_import}/..'
+sys.path.insert(0, dir_base)
+
+from exploration_analisys import distribuition_graphs, dispersive_statistics
 
 def init_app(server):
     app = dash.Dash(
@@ -48,6 +54,7 @@ def init_app(server):
                 dbc.NavLink("Load Data", href="/load", active="exact"),
                 dbc.NavLink("Exploration Analisys", href="/exploration", active="exact"),
                 dbc.NavLink("Correlation Analisys", href='/correlation', active="exact"),
+                dbc.NavLink("Data Manipulation", href='/manipulation', active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -64,7 +71,11 @@ def init_app(server):
         sidebar,
         content,       
         
-    ])
+    ])     
+            
+    def read_file(filename):
+        return pd.read_csv(filename)
+
     def parse_contents(contents, filename, date):
         content_type, content_string = contents.split(',')
 
@@ -74,6 +85,7 @@ def init_app(server):
                 # Assume that the user uploaded a CSV file
                 df = pd.read_csv(
                     io.StringIO(decoded.decode('utf-8')))
+                
         except Exception as e:
             print(e)
             return html.Div([
@@ -91,19 +103,57 @@ def init_app(server):
             html.Hr(),  # horizontal line
 
             
-        ])
-    @app.callback(Output('output-data-upload', 'children'),
+        ]), df
+    @app.callback(
+              Output('output-data-upload', 'children'),
+              Output('input_data', "data"),
               Input('upload-data', 'contents'),
               State('upload-data', 'filename'),
               State('upload-data', 'last_modified'))
     def update_output(list_of_contents, list_of_names, list_of_dates):
         if list_of_contents is not None:
+            result = parse_contents(list_of_contents[0], list_of_names[0], list_of_dates[0])
             content = [
-                parse_contents(c, n, d) for c, n, d in
-                zip(list_of_contents, list_of_names, list_of_dates)]
+                result[0]]
+            df = result[1]
+
+
+            return content, df.to_json(date_format='iso')
+            
         else:
-            content = None
-        return content
+            return None, None
+        
+    # @app.callback(
+    #     Output('dropdown-exploration', 'options'),
+    #     Input('dropdown-exploration-parent', "n_clicks"),
+    #     State('input_data','data')
+    # )  
+    # def change_dropdown_options(n_clicks,data):
+    #     if n_clicks is None:
+    #         raise dash.exceptions.PreventUpdate
+        
+    #     options = pd.read_json(data, dtype=dict(TS='datetime64[ns]')).columns
+    #     return options
+    
+    @app.callback(
+        Output('graphics-area','children'),
+        Input('dropdown-exploration','value'),
+        State('input_data',"data")
+    )
+    def create_exploration_graphics(value,data):
+        if value != None:
+            data = pd.read_json(data, dtype=dict(TS='datetime64[ns]'))
+            
+            if value=='Histogram':
+                histograms = distribuition_graphs.generate_dist_plots(data)
+                statistics = dispersive_statistics.generate_dispersive_statistics(data)
+            
+            graphichs = []
+            for histogram in histograms:
+                graphichs.append(dcc.Graph(figure=histogram))
+            
+            return graphichs
+
     
     
     
@@ -137,6 +187,19 @@ def init_app(server):
                     ),
                     html.Div(id='output-data-upload'),
                 ])
+
+            ]
+        elif pathname == '/exploration':
+            return [                
+                    dcc.Dropdown(id="dropdown-exploration",options=['Histogram', "Time Series", "Box plots"],
+                    placeholder="Choice the type of graph for behavior visualization of input variables"
+                    ),
+
+            
+            html.Div(
+                id='graphics-area',
+                children=[]
+            )
 
             ]
             
