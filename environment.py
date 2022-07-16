@@ -54,6 +54,7 @@ def init_app(server):
                 dbc.NavLink("Load Data", href="/load", active="exact"),
                 dbc.NavLink("Exploration Analisys", href="/exploration", active="exact"),
                 dbc.NavLink("Correlation Analisys", href='/correlation', active="exact"),
+                dbc.NavLink("Statistics Tests", href='/statistics-tests', active="exact"),
                 dbc.NavLink("Data Manipulation", href='/manipulation', active="exact"),
             ],
             vertical=True,
@@ -146,13 +147,38 @@ def init_app(server):
             
             if value=='Histogram':
                 histograms = distribuition_graphs.generate_dist_plots(data)
-                statistics = dispersive_statistics.generate_dispersive_statistics(data)
             
             graphichs = []
             for histogram in histograms:
                 graphichs.append(dcc.Graph(figure=histogram))
-            
             return graphichs
+
+    @app.callback(
+        Output('metrics-area','children'),
+        Input('dropdown-exploration','value'),
+        State('input_data','data')
+    )
+    def create_metrics(value,data):
+        if value != None:
+            data = pd.read_json(data, dtype=dict(TS='datetime64[ns]'))
+        metrics = []
+        statistics = dispersive_statistics.generate_dispersive_statistics(data)
+        for var in statistics.keys():
+            for metric,value in statistics[var].items():
+                card = dbc.Card(f"{metric}: {value}",
+                style={
+                    
+                    'background-color': '#444',
+                    'color': '#fff',
+                    'border-radius': '5px',
+                    'padding': '20px',
+                    'font-size': '150%'  }
+                
+                )
+                metrics.append(card)
+        
+        return metrics
+
 
     
     
@@ -195,12 +221,35 @@ def init_app(server):
                     placeholder="Choice the type of graph for behavior visualization of input variables"
                     ),
 
-            
             html.Div(
-                id='graphics-area',
-                children=[]
+                id='exploration-parent',
+                children=[
+                html.Div(
+                    id='graphics-area',
+                    children=[],
+                    style={
+                        'width': "50%"
+                    }
+                ),
+                html.Div(
+                    id='metrics-area',
+                    children=[],
+                    style={
+                        'width': "50%",
+                        'display': 'grid',
+                        'grid-template-columns': '50% 50%',
+                        'grid-gap': '10px',
+                        'background-color': '#fff',
+                        'color': '#444'
+                    }
+                    
+                )
+            ],
+            style={
+                        'display': "flex"
+                    }
             )
-
+            
             ]
             
 
