@@ -1,0 +1,9 @@
+- Tela inicial:
+	- Gráficos de distribuição e métricas;
+
+- Tela de correlação:
+	- Correlação com uma target;
+	- Redundância;
+
+- Tela de manipulação:
+	- Substituição de valores ausentes por algum valor.
