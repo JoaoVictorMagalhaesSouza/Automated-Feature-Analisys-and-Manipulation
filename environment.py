@@ -137,7 +137,7 @@ def init_app(server):
     #     return options
     
     @app.callback(
-        Output('graphics-area','children'),
+        Output('exploration-parent','children'),
         Input('dropdown-exploration','value'),
         State('input_data',"data")
     )
@@ -147,37 +147,60 @@ def init_app(server):
             
             if value=='Histogram':
                 histograms = distribuition_graphs.generate_dist_plots(data)
-            
-            graphichs = []
-            for histogram in histograms:
-                graphichs.append(dcc.Graph(figure=histogram))
-            return graphichs
+                statistics = dispersive_statistics.generate_dispersive_statistics(data)
 
-    @app.callback(
-        Output('metrics-area','children'),
-        Input('dropdown-exploration','value'),
-        State('input_data','data')
-    )
-    def create_metrics(value,data):
-        if value != None:
-            data = pd.read_json(data, dtype=dict(TS='datetime64[ns]'))
-        metrics = []
-        statistics = dispersive_statistics.generate_dispersive_statistics(data)
-        for var in statistics.keys():
-            for metric,value in statistics[var].items():
-                card = dbc.Card(f"{metric}: {value}",
-                style={
+            graphichs = []
+            metrics = []
+            result = []
+
+            for var in statistics.keys():
+                for metric,value in statistics[var].items():
+                    card = dbc.Card(f"{metric}: {value}",
+                    style={
+                        
+                        'background-color': '#444',
+                        'color': '#fff',
+                        'border-radius': '5px',
+                        'padding': '20px',
+                        'font-size': '150%'  }
                     
-                    'background-color': '#444',
-                    'color': '#fff',
-                    'border-radius': '5px',
-                    'padding': '20px',
-                    'font-size': '150%'  }
-                
-                )
+                    )
                 metrics.append(card)
+
+            for histogram in histograms:
+                aux = []
+                for i in range (0,len(metrics),7):
+                    aux.append(metrics[i])
+                div = html.Div([dcc.Graph(children=histogram),aux])
+                result.append(div)
+            
+            return result
+
+    # @app.callback(
+    #     Output('metrics-area','children'),
+    #     Input('dropdown-exploration','value'),
+    #     State('input_data','data')
+    # )
+    # def create_metrics(value,data):
+    #     if value != None:
+    #         data = pd.read_json(data, dtype=dict(TS='datetime64[ns]'))
+    #     metrics = []
+    #     statistics = dispersive_statistics.generate_dispersive_statistics(data)
+    #     for var in statistics.keys():
+    #         for metric,value in statistics[var].items():
+    #             card = dbc.Card(f"{metric}: {value}",
+    #             style={
+                    
+    #                 'background-color': '#444',
+    #                 'color': '#fff',
+    #                 'border-radius': '5px',
+    #                 'padding': '20px',
+    #                 'font-size': '150%'  }
+                
+    #             )
+    #             metrics.append(card)
         
-        return metrics
+    #     return metrics
 
 
     
@@ -240,7 +263,9 @@ def init_app(server):
                         'grid-template-columns': '50% 50%',
                         'grid-gap': '10px',
                         'background-color': '#fff',
-                        'color': '#444'
+                        'color': '#444',
+                        'min-height': '600px',
+                        'max-height': '600px'
                     }
                     
                 )
